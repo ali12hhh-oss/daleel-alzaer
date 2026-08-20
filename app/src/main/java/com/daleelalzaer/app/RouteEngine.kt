@@ -4,6 +4,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -33,7 +35,6 @@ object RouteEngine {
                 "$fromLng,$fromLat;$toLng,$toLat" +
                 "?overview=full&geometries=geojson&alternatives=true&steps=true"
         )
-
         val connection = (url.openConnection() as HttpURLConnection).apply {
             requestMethod = "GET"
             connectTimeout = 15_000
@@ -41,12 +42,11 @@ object RouteEngine {
             setRequestProperty("Accept", "application/json")
             setRequestProperty("User-Agent", "daleel-alzaer-native/1.0")
         }
-
         try {
-            val code = connection.responseCode
-            if (code !in 200..299) throw IllegalStateException("تعذر الاتصال بمحرك حساب الطرق")
-            val body = connection.inputStream.bufferedReader().use { it.readText() }
-            parse(body)
+            if (connection.responseCode !in 200..299) {
+                throw IllegalStateException("تعذر الاتصال بمحرك حساب الطرق")
+            }
+            parse(connection.inputStream.bufferedReader().use { it.readText() })
         } finally {
             connection.disconnect()
         }
@@ -57,7 +57,6 @@ object RouteEngine {
         if (root["code"]?.toString()?.trim('"') != "Ok") {
             throw IllegalStateException("لم يتم العثور على طريق مناسب لهذه الوجهة")
         }
-
         val routes = root["routes"]?.jsonArray ?: return emptyList()
         return routes.mapIndexedNotNull { index, routeElement ->
             val route = routeElement.jsonObject
@@ -93,7 +92,9 @@ object RouteEngine {
                 instructions = instructions
             )
         }.sortedBy { it.distanceKm }
-            .mapIndexed { index, route -> route.copy(name = if (index == 0) "المسار الأقرب" else "مسار بديل $index") }
+            .mapIndexed { index, route ->
+                route.copy(name = if (index == 0) "المسار الأقرب" else "مسار بديل $index")
+            }
     }
 
     private fun instruction(type: String?, modifier: String?, road: String): String? {
