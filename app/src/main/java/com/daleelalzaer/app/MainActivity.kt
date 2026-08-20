@@ -18,6 +18,7 @@ import androidx.compose.animation.core.tween
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -1898,7 +1899,6 @@ private fun WaterSurface(
     modifier: Modifier,
     content: @Composable () -> Unit
 ) {
-
     var press by remember {
         mutableStateOf<Offset?>(null)
     }
@@ -1907,24 +1907,23 @@ private fun WaterSurface(
         mutableFloatStateOf(0f)
     }
 
-    val scope =
-        rememberCoroutineScope()
+    val scope = rememberCoroutineScope()
+
+    // نأخذ اللون هنا لأن هذا المكان @Composable
+    // ولا نستخدم MaterialTheme داخل Canvas مباشرة.
+    val rippleColor = MaterialTheme.colorScheme.primary
+    val surfaceColor = MaterialTheme.colorScheme.surface
 
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(22.dp))
-            .background(
-                MaterialTheme.colorScheme.surface
-            )
+            .background(surfaceColor)
             .pointerInput(Unit) {
-
                 detectTapGestures { position ->
-
                     press = position
                     wave = 0f
 
                     scope.launch {
-
                         animate(
                             initialValue = 0f,
                             targetValue = 1f,
@@ -1933,7 +1932,6 @@ private fun WaterSurface(
                                 easing = FastOutSlowInEasing
                             )
                         ) { value, _ ->
-
                             wave = value
                         }
                     }
@@ -1942,25 +1940,18 @@ private fun WaterSurface(
                 }
             }
     ) {
-
         content()
 
         press?.let { center ->
-
             Canvas(
                 modifier = Modifier.matchParentSize()
             ) {
-
                 val radius =
-                    maxOf(
-                        size.width,
-                        size.height
-                    ) * (
-                        0.12f + wave * 1.15f
-                    )
+                    maxOf(size.width, size.height) *
+                        (0.12f + wave * 1.15f)
 
                 drawCircle(
-                    color = MaterialTheme.colorScheme.primary.copy(
+                    color = rippleColor.copy(
                         alpha = 0.16f * (1f - wave)
                     ),
                     radius = radius,
@@ -1990,56 +1981,28 @@ private fun WaterSurface(
 private fun BottomBar(
     nav: NavHostController
 ) {
+    val current = nav.currentBackStackEntryAsState().value?.destination?.route
 
-    NavigationBar(
-        containerColor = MaterialTheme.colorScheme.surface
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 4.dp,
+        shadowElevation = 4.dp
     ) {
-
-        val current =
-            nav.currentBackStackEntryAsState()
-                .value
-                ?.destination
-                ?.route
-
-        NavItem(
-            route = "home",
-            label = "الرئيسية",
-            icon = Icons.Default.Home,
-            current = current,
-            nav = nav
-        )
-
-        NavItem(
-            route = "shrines",
-            label = "المراقد",
-            icon = Icons.Default.Mosque,
-            current = current,
-            nav = nav
-        )
-
-        NavItem(
-            route = "worship",
-            label = "العبادة",
-            icon = Icons.Default.Favorite,
-            current = current,
-            nav = nav
-        )
-
-        NavItem(
-            route = "map",
-            label = "الخريطة",
-            icon = Icons.Default.Map,
-            current = current,
-            nav = nav
-        )
-
-        NavItem(
-            route = "more",
-            label = "المزيد",
-            icon = Icons.Default.Menu,
-            current = current,
-            nav = nav
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .height(68.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            NavItem("home", "الرئيسية", Icons.Default.Home, current, nav)
+            NavItem("shrines", "المراقد", Icons.Default.Mosque, current, nav)
+            NavItem("worship", "العبادة", Icons.Default.Favorite, current, nav)
+            NavItem("map", "الخريطة", Icons.Default.Map, current, nav)
+            NavItem("more", "المزيد", Icons.Default.Menu, current, nav)
+        }
     }
 }
 
@@ -2055,30 +2018,55 @@ private fun NavItem(
     current: String?,
     nav: NavHostController
 ) {
+    val selected = current == route
 
-    NavigationBarItem(
-        selected = current == route,
-        onClick = {
-
-            nav.navigate(route) {
-
-                launchSingleTop = true
-                restoreState = true
+    Column(
+        modifier = Modifier
+            .width(68.dp)
+            .fillMaxHeight()
+            .clip(RoundedCornerShape(16.dp))
+            .background(
+                if (selected) {
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
+                } else {
+                    Color.Transparent
+                }
+            )
+            .clickable {
+                nav.navigate(route) {
+                    launchSingleTop = true
+                    restoreState = true
+                }
             }
-        },
-        icon = {
-            Icon(
-                imageVector = icon,
-                contentDescription = label
-            )
-        },
-        label = {
-            Text(
-                text = label,
-                fontSize = 11.sp
-            )
-        }
-    )
+            .padding(vertical = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = if (selected) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
+            },
+            modifier = Modifier.size(24.dp)
+        )
+
+        Spacer(Modifier.height(3.dp))
+
+        Text(
+            text = label,
+            fontSize = 10.sp,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+            color = if (selected) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
+            },
+            maxLines = 1
+        )
+    }
 }
 
 // ============================================================
