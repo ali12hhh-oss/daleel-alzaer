@@ -9,6 +9,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 
 /** Local UI helper used by the native screens for press-scale animation. */
 fun Modifier.graphicsLayer(scaleX: Float = 1f, scaleY: Float = 1f): Modifier =
@@ -28,3 +30,12 @@ fun InteractionSource.collectIsPressedAsState(): State<Boolean> {
     }
     return state
 }
+
+/** Compatibility wrapper for Compose saveable state used by the native screens. */
+@Composable
+fun <T> rememberSaveable(vararg inputs: Any?, init: () -> T): T =
+    androidx.compose.runtime.saveable.rememberSaveable(*inputs, init = init)
+
+/** Compatibility wrapper for coroutine launch used by MainActivity. */
+fun CoroutineScope.launch(block: suspend CoroutineScope.() -> Unit): Job =
+    kotlinx.coroutines.launch(this, block = block)
