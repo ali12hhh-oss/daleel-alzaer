@@ -11,9 +11,9 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.floor
 import kotlin.math.ln
-import kotlin.math.tan
-import kotlin.math.min
 import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.tan
 
 @Serializable
 data class SavedNativeRoute(
@@ -73,7 +73,9 @@ object OfflineMapService {
             val topLeft = latLngToTile(maxLat, minLng, z)
             val bottomRight = latLngToTile(minLat, maxLng, z)
             for (x in topLeft.first..bottomRight.first) {
-                for (y in topLeft.second..bottomRight.second) tiles += Triple(z, x, y)
+                for (y in topLeft.second..bottomRight.second) {
+                    tiles += Triple(z, x, y)
+                }
             }
         }
 
@@ -81,50 +83,62 @@ object OfflineMapService {
         var failed = 0
         onProgress(0, tiles.size, 0)
 
-        tiles.chunked(6).forEach { batch ->
-            kotlinx.coroutines.coroutineScope {
-                batch.map { tile ->
-                    kotlinx.coroutines.async(kotlinx.coroutines.Dispatchers.IO) {
-                        val (z, x, y) = tile
-                        val file = File(root(context), "$z/$x/$y.png")
-                        if (file.exists() && file.length() > 0L) {
-                            downloaded++
-                            return@async
-                        }
-                        try {
-                            val bytes = request(tileUrlTemplate, z, x, y)
-                                ?: request(fallbackTileUrlTemplate, z, x, y)
-                            if (bytes != null && bytes.isNotEmpty()) {
-                                file.parentFile?.mkdirs()
-                                file.writeBytes(bytes)
-                                downloaded++
-                            } else failed++
-                        } catch (_: Throwable) {
-                            failed++
-                        }
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            for (tile in tiles) {
+                val (z, x, y) = tile
+                val file = File(root(context), "$z/$x/$y.png")
+
+                if (file.exists() && file.length() > 0L) {
+                    downloaded++
+                    onProgress(downloaded, tiles.size, failed)
+                    continue
+                }
+
+                try {
+                    val bytes = request(tileUrlTemplate, z, x, y)
+                        ?: request(fallbackTileUrlTemplate, z, x, y)
+
+                    if (bytes != null && bytes.isNotEmpty()) {
+                        file.parentFile?.mkdirs()
+                        file.writeBytes(bytes)
+                        downloaded++
+                    } else {
+                        failed++
                     }
-                }.forEach { it.await() }
+                } catch (_: Throwable) {
+                    failed++
+                }
+
+                onProgress(downloaded, tiles.size, failed)
             }
-            onProgress(downloaded, tiles.size, failed)
         }
     }
 
     private fun request(template: String, z: Int, x: Int, y: Int): ByteArray? {
-        val url = URL(template.replace("{z}", "$z").replace("{x}", "$x").replace("{y}", "$y"))
+        val url = URL(
+            template.replace("{z}", "$z")
+                .replace("{x}", "$x")
+                .replace("{y}", "$y")
+        )
         val connection = (url.openConnection() as HttpURLConnection).apply {
             connectTimeout = 10_000
             readTimeout = 12_000
             setRequestProperty("User-Agent", "daleel-alzaer-native/1.0")
         }
         return try {
-            if (connection.responseCode != 200) null else connection.inputStream.use { it.readBytes() }
+            if (connection.responseCode != 200) {
+                null
+            } else {
+                connection.inputStream.use { it.readBytes() }
+            }
         } finally {
             connection.disconnect()
         }
     }
 
     fun cacheSizeMb(context: Context): Double {
-        fun size(file: File): Long = if (file.isFile) file.length() else file.listFiles()?.sumOf(::size) ?: 0L
+        fun size(file: File): Long =
+            if (file.isFile) file.length() else file.listFiles()?.sumOf(::size) ?: 0L
         return size(root(context)) / 1024.0 / 1024.0
     }
 
@@ -138,14 +152,24 @@ object OfflineMapService {
         val key = routeKey(set)
         existing.removeAll { routeKey(it) == key }
         existing += set
-        routeFile(context).writeText(json.encodeToString(ListSerializer(SavedNativeRouteSet.serializer()), existing))
+        routeFile(context).writeText(
+            json.encodeToString(
+                ListSerializer(SavedNativeRouteSet.serializer()),
+                existing
+            )
+        )
     }
 
     fun loadRouteSets(context: Context): List<SavedNativeRouteSet> = runCatching {
         val file = routeFile(context)
-        if (!file.exists()) emptyList() else json.decodeFromString(
-            ListSerializer(SavedNativeRouteSet.serializer()), file.readText()
-        )
+        if (!file.exists()) {
+            emptyList()
+        } else {
+            json.decodeFromString(
+                ListSerializer(SavedNativeRouteSet.serializer()),
+                file.readText()
+            )
+        }
     }.getOrDefault(emptyList())
 
     fun findRoutes(
@@ -161,8 +185,12 @@ object OfflineMapService {
                 almost(it.destinationLatitude, destinationLat) &&
                 almost(it.destinationLongitude, destinationLng)
         }
-        if (fromLat == null || fromLng == null) return candidates.firstOrNull()?.routes ?: emptyList()
-        return candidates.minByOrNull { distance(it.latitude, it.longitude, fromLat, fromLng) }?.routes ?: emptyList()
+        if (fromLat == null || fromLng == null) {
+            return candidates.firstOrNull()?.routes ?: emptyList()
+        }
+        return candidates.minByOrNull {
+            distance(it.latitude, it.longitude, fromLat, fromLng)
+        }?.routes ?: emptyList()
     }
 
     private fun routeKey(s: SavedNativeRouteSet) =
