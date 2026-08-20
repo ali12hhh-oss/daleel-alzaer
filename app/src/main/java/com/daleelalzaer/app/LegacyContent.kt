@@ -13,6 +13,8 @@ import kotlinx.serialization.builtins.ListSerializer
 @Serializable data class ZiaratEntry(val title:String,val subtitle:String,val content:String)
 typealias DuaEntry = ZiaratEntry
 @Serializable data class SacredPlaceEntry(val name:String,val subtitle:String,val lat:Double,val lng:Double)
+@Serializable data class HijriMonth(val name:String,val number:Int,val hijriYear:Int,val startDate:String,val days:Int)
+@Serializable data class HijriCalendarData(val hijriMonths:List<HijriMonth>,val lastUpdated:String)
 
 object LegacyAssets {
     private val json=Json{ignoreUnknownKeys=true}
