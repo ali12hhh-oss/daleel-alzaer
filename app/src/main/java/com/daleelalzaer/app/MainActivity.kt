@@ -93,6 +93,7 @@ fun DaleelAlzaerApp() {
                 composable("route") { RouteScreen(nav) }
                 composable("scholars") { ScholarsScreen(nav) }
                 composable("prayer") { PrayerScreen(nav) }
+                composable("rakah") { RakahCounterScreen(nav) }
                 composable("qada") { QadaScreen(nav) }
                 composable("qibla") { QiblaScreen(nav) }
                 composable("compass") { CompassScreen(nav) }
@@ -169,6 +170,7 @@ private fun Home(nav: NavHostController, dark: Boolean, toggle: () -> Unit) {
             item { HomeCard(nav, "دليل مسار الزائر", "حدد موقعك واعرف أقرب المسارات", Icons.Default.DirectionsWalk, "route") }
             item { HomeCard(nav, "المسائل الشرعية", "اختر المرجع الديني واطّلع على الأجوبة الشرعية", Icons.Default.MenuBook, "scholars") }
             item { HomeCard(nav, "مواقيت الصلاة", "حسب كتيب مواقيت الصلاة للسيد السيستاني", Icons.Default.AccessTime, "prayer") }
+            item { HomeCard(nav, "عداد الركعات", "عداد مستقل للركعات أثناء الصلاة", Icons.Default.FormatListNumbered, "rakah") }
             item { HomeCard(nav, "قضاء الصلاة", "متابعة الصلوات الفائتة وخطة القضاء وسجل الإنجاز", Icons.Default.CheckCircleOutline, "qada") }
             item { HomeCard(nav, "اتجاه القبلة", "حساب اتجاه القبلة حسب موقعك", Icons.Default.Explore, "qibla") }
             item { HomeCard(nav, "اتجاه مراقد المعصومين (ع)", "حدد موقع المراقد الشريفة والاماكن المقدسة حسب موقعك", Icons.Default.Explore, "compass") }
@@ -199,7 +201,7 @@ private fun Home(nav: NavHostController, dark: Boolean, toggle: () -> Unit) {
 
 @Composable
 private fun HomeCard(nav: NavHostController, title: String, subtitle: String, icon: ImageVector, route: String) {
-    AnimatedSurface(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+    AnimatedSurface(Modifier.fillMaxWidth().padding(horizontal = 16.dp), { nav.navigate(route) }) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(54.dp).clip(RoundedCornerShape(17.dp)).background(MaterialTheme.colorScheme.primary.copy(.13f)), contentAlignment = Alignment.Center) {
                 Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
@@ -344,6 +346,89 @@ private fun Page(title: String, icon: ImageVector, nav: NavHostController, body:
         Box(Modifier.size(45.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary.copy(.1f)), contentAlignment = Alignment.Center) { Icon(icon, null, tint = MaterialTheme.colorScheme.primary) }
         Spacer(Modifier.width(11.dp)); Text(title, Modifier.weight(1f), fontWeight = FontWeight.Bold, fontSize = 17.sp); Text(value?.let { SimpleDateFormat("hh:mm a", Locale("ar")).format(it.time) } ?: "—", color = MaterialTheme.colorScheme.secondary, fontSize = 19.sp, fontWeight = FontWeight.Bold)
     } }
+}
+
+@Composable
+private fun RakahCounterScreen(nav: NavHostController) {
+    var count by rememberSaveable { mutableIntStateOf(0) }
+
+    Page("عداد الركعات", Icons.Default.FormatListNumbered, nav) { p ->
+        Column(
+            Modifier.fillMaxSize()
+                .padding(p)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Info(
+                "عداد الركعات",
+                "عداد مستقل للركعات أثناء الصلاة",
+                Icons.Default.FormatListNumbered
+            )
+
+            Spacer(Modifier.height(24.dp))
+
+            Card(
+                Modifier.fillMaxWidth(),
+                RoundedCornerShape(28.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Column(
+                    Modifier.fillMaxWidth().padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        "عدد الركعات",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(Modifier.height(12.dp))
+
+                    Box(
+                        Modifier.size(190.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            Modifier.size(158.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                count.toString(),
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                fontSize = 58.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(22.dp))
+
+                    ActionButton(
+                        "إضافة ركعة",
+                        { count++ },
+                        Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(Modifier.height(10.dp))
+
+                    ActionButton(
+                        "تصفير العداد",
+                        { count = 0 },
+                        Modifier.fillMaxWidth(),
+                        MaterialTheme.colorScheme.secondary
+                    )
+                }
+            }
+        }
+    }
 }
 
 @Composable private fun QadaScreen(nav: NavHostController) {
