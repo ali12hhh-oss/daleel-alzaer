@@ -97,6 +97,9 @@ import kotlin.math.sqrt
 private val Green = Color(0xFF0B4F4A)
 private val Gold = Color(0xFFD6A84F)
 private val Cream = Color(0xFFF7F3E8)
+private val DeepTeal = Color(0xFF001D27)
+private val PanelTeal = Color(0xFF052E38)
+private val SoftText = Color(0xFFF8F0DC)
 
 private data class Shrine(val name: String, val lat: Double, val lon: Double, val city: String)
 private data class Prayer(val name: String, val time: String)
@@ -131,16 +134,32 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun DaleelApp() {
     val context = LocalContext.current
-    var dark by remember { mutableStateOf(false) }
-    val colors = if (dark) darkColorScheme(primary = Color(0xFF70D1C8), secondary = Gold) else lightColorScheme(primary = Green, secondary = Gold, background = Cream)
+    var dark by remember { mutableStateOf(true) }
+    val colors = if (dark) {
+        darkColorScheme(
+            primary = Color(0xFFF0C766),
+            onPrimary = Color(0xFF17343A),
+            secondary = Gold,
+            background = DeepTeal,
+            surface = PanelTeal,
+            surfaceVariant = Color(0xFF0A3D46),
+            onBackground = SoftText,
+            onSurface = SoftText
+        )
+    } else {
+        lightColorScheme(primary = Green, secondary = Gold, background = Cream)
+    }
     MaterialTheme(colorScheme = colors) {
         androidx.compose.runtime.CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
             var screen by remember { mutableStateOf(Screen.HOME) }
             Scaffold(
-                topBar = { AppBar(screen) { screen = Screen.HOME } },
+                containerColor = if (dark) DeepTeal else Cream,
+                topBar = {
+                    if (screen != Screen.HOME) AppBar(screen) { screen = Screen.HOME }
+                },
                 bottomBar = {
                     if (screen in listOf(Screen.HOME, Screen.PRAYER, Screen.QURAN, Screen.TOOLS, Screen.SETTINGS)) {
-                        NavigationBar {
+                        NavigationBar(containerColor = if (dark) PanelTeal else MaterialTheme.colorScheme.surface) {
                             NavigationBarItem(screen == Screen.HOME, { screen = Screen.HOME }, icon = { Icon(Icons.Default.Home, null) }, label = { Text("الرئيسية") })
                             NavigationBarItem(screen == Screen.PRAYER, { screen = Screen.PRAYER }, icon = { Icon(Icons.Default.AccessTime, null) }, label = { Text("الصلاة") })
                             NavigationBarItem(screen == Screen.QURAN, { screen = Screen.QURAN }, icon = { Icon(Icons.Default.MenuBook, null) }, label = { Text("القرآن") })
@@ -150,9 +169,9 @@ private fun DaleelApp() {
                     }
                 }
             ) { pad ->
-                Surface(Modifier.fillMaxSize().padding(pad), color = MaterialTheme.colorScheme.background) {
+                Surface(Modifier.fillMaxSize().padding(pad), color = if (dark) DeepTeal else MaterialTheme.colorScheme.background) {
                     when (screen) {
-                        Screen.HOME -> HomeScreen { screen = it }
+                        Screen.HOME -> HomeScreenNew { screen = it }
                         Screen.PRAYER -> PrayerScreen()
                         Screen.QURAN -> QuranScreen()
                         Screen.TOOLS -> ToolsScreen { screen = it }
