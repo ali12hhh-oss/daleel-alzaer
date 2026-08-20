@@ -5,7 +5,6 @@ import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -14,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch as coroutineLaunch
 
 /** Local UI helper used by the native screens for press-scale animation. */
 fun Modifier.graphicsLayer(scaleX: Float = 1f, scaleY: Float = 1f): Modifier =
@@ -34,16 +34,20 @@ fun InteractionSource.collectIsPressedAsState(): State<Boolean> {
     return state
 }
 
-/** Single generic saveable-state wrapper. The previous MutableIntState overload caused
- * Boolean and Double states to resolve to the wrong overload under Kotlin 2.x. */
+/**
+ * Exact generic wrapper around Compose rememberSaveable.
+ * It deliberately preserves the concrete state type returned by the initializer
+ * (MutableState, MutableIntState, MutableLongState, etc.) so Kotlin does not
+ * widen the state and create ++ / delegate overload ambiguities.
+ */
 @Composable
-fun <T> rememberSaveable(init: () -> MutableState<T>): MutableState<T> =
+fun <T> rememberSaveable(init: () -> T): T =
     composeRememberSaveable(init = init)
 
-/** Used only by the Toggle helper, which is not itself a RowScope receiver. */
+/** Compatibility helper used by the existing Toggle composable. */
 fun Modifier.weight(weight: Float): Modifier =
     fillMaxWidth((weight / 2f).coerceIn(0.01f, 1f))
 
-/** Compatibility wrapper for coroutine launch used by MainActivity. */
+/** Compatibility wrapper for the existing MainScope().launch calls. */
 fun CoroutineScope.launch(block: suspend CoroutineScope.() -> Unit): Job =
-    kotlinx.coroutines.launch(this, block = block)
+    coroutineLaunch(block = block)
