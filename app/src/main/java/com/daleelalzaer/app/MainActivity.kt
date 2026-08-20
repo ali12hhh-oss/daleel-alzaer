@@ -1332,9 +1332,7 @@ private fun ListPage(
 // ============================================================
 
 @Composable
-private fun PrayerScreen(
-    nav: NavHostController
-) {
+private fun PrayerScreen(nav: NavHostController) {
 
     val context = LocalContext.current
 
