@@ -1,8 +1,8 @@
 <resources>
     <style name="Theme.DaleelAlzaer" parent="android:style/Theme.Material.Light.NoActionBar">
         <item name="android:fontFamily">sans</item>
-        <item name="android:windowLightStatusBar">true</item>
-        <item name="android:navigationBarColor">#F6F3EA</item>
-        <item name="android:statusBarColor">#F6F3EA</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:statusBarColor">#0B3D3A</item>
+        <item name="android:navigationBarColor">#071F1D</item>
     </style>
 </resources>
