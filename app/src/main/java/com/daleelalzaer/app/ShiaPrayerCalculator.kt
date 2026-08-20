@@ -1,22 +1,130 @@
 package com.daleelalzaer.app
 
 import java.util.Calendar
-import kotlin.math.*
+import kotlin.math.PI
+import kotlin.math.asin
+import kotlin.math.atan2
+import kotlin.math.acos
+import kotlin.math.cos
+import kotlin.math.floor
+import kotlin.math.round
+import kotlin.math.sin
 
-data class ShiaPrayerTimes(val fajr:Calendar,val dhuhr:Calendar,val maghrib:Calendar,val sunrise:Calendar,val sunset:Calendar)
+data class ShiaPrayerTimes(
+    val fajr: Calendar,
+    val dhuhr: Calendar,
+    val maghrib: Calendar,
+    val sunrise: Calendar,
+    val sunset: Calendar
+)
 
 object ShiaPrayerCalculator {
-    fun calculate(lat:Double,lng:Double,date:Calendar=Calendar.getInstance()):ShiaPrayerTimes{
-        val sun=sunPosition(julian(date));val dhuhr=12.0-lng/15.0-sun.eq
-        val fajrT=angleTime(18.0,lat,sun.dec);val rise=angleTime(.833,lat,sun.dec);val mag=angleTime(4.5,lat,sun.dec)
-        return ShiaPrayerTimes(utc(date,dhuhr-fajrT),utc(date,dhuhr),utc(date,dhuhr+mag),utc(date,dhuhr-rise),utc(date,dhuhr+rise))
+    fun calculate(
+        lat: Double,
+        lng: Double,
+        date: Calendar = Calendar.getInstance()
+    ): ShiaPrayerTimes {
+        val sunData = sun(julian(date))
+        val solarNoon = 12.0 - lng / 15.0 - sunData.eq
+        val fajrHourAngle = angleTime(18.0, lat, sunData.dec)
+        val sunriseHourAngle = angleTime(0.833, lat, sunData.dec)
+        val maghribHourAngle = angleTime(4.5, lat, sunData.dec)
+
+        return ShiaPrayerTimes(
+            fajr = utc(date, solarNoon - fajrHourAngle),
+            dhuhr = utc(date, solarNoon),
+            maghrib = utc(date, solarNoon + maghribHourAngle),
+            sunrise = utc(date, solarNoon - sunriseHourAngle),
+            sunset = utc(date, solarNoon + sunriseHourAngle)
+        )
     }
-    private data class Sun(val dec:Double,val eq:Double)
-    private fun julian(c:Calendar):Double{var y=c.get(Calendar.YEAR);var m=c.get(Calendar.MONTH)+1;val d=c.get(Calendar.DAY_OF_MONTH);if(m<=2){y--;m+=12};val a=floor(y/100.0);val b=2-a+floor(a/4.0);return floor(365.25*(y+4716))+floor(30.6001*(m+1))+d+b-1524.5}
-    private fun sun(jd:Double):Sun{val d=jd-2451545.0;val g=fix(357.529+.98560028*d);val q=fix(280.459+.98564736*d);val l=fix(q+1.915*sin(r(g))+.020*sin(r(2*g)));val e=23.439-.00000036*d;var ra=Math.toDegrees(atan2(cos(r(e))*sin(r(l)),cos(r(l))))/15.0;ra=fixh(ra);return Sun(Math.toDegrees(asin(sin(r(e))*sin(r(l)))),q/15.0-ra)}
-    private fun angleTime(a:Double,lat:Double,dec:Double):Double{val n=-sin(r(a))-sin(r(lat))*sin(r(dec));val d=cos(r(lat))*cos(r(dec));return Math.toDegrees(acos((n/d).coerceIn(-1.0,1.0)))/15.0}
-    private fun utc(c:Calendar,h:Double):Calendar{val o=Calendar.getInstance();o.timeInMillis=c.timeInMillis;o.set(Calendar.HOUR_OF_DAY,0);o.set(Calendar.MINUTE,0);o.set(Calendar.SECOND,0);o.set(Calendar.MILLISECOND,0);o.timeInMillis+=round(h*60.0).toLong()*60000L;return o}
-    private fun r(v:Double)=v*Math.PI/180.0
-    private fun fix(v:Double):Double{val x=v%360.0;return if(x<0)x+360 else x}
-    private fun fixh(v:Double):Double{val x=v%24.0;return if(x<0)x+24 else x}
+
+    private data class Sun(
+        val dec: Double,
+        val eq: Double
+    )
+
+    private fun julian(c: Calendar): Double {
+        var year = c.get(Calendar.YEAR)
+        var month = c.get(Calendar.MONTH) + 1
+        val day = c.get(Calendar.DAY_OF_MONTH)
+
+        if (month <= 2) {
+            year--
+            month += 12
+        }
+
+        val a = floor(year / 100.0)
+        val b = 2.0 - a + floor(a / 4.0)
+
+        return floor(365.25 * (year + 4716)) +
+            floor(30.6001 * (month + 1)) +
+            day + b - 1524.5
+    }
+
+    private fun sun(jd: Double): Sun {
+        val days = jd - 2451545.0
+        val meanAnomaly = fix(357.529 + 0.98560028 * days)
+        val meanLongitude = fix(280.459 + 0.98564736 * days)
+        val eclipticLongitude = fix(
+            meanLongitude +
+                1.915 * sin(radians(meanAnomaly)) +
+                0.020 * sin(radians(2.0 * meanAnomaly))
+        )
+        val obliquity = 23.439 - 0.00000036 * days
+
+        var rightAscension = Math.toDegrees(
+            atan2(
+                cos(radians(obliquity)) * sin(radians(eclipticLongitude)),
+                cos(radians(eclipticLongitude))
+            )
+        ) / 15.0
+        rightAscension = fixHours(rightAscension)
+
+        val declination = Math.toDegrees(
+            asin(
+                sin(radians(obliquity)) * sin(radians(eclipticLongitude))
+            )
+        )
+
+        val equationOfTime = meanLongitude / 15.0 - rightAscension
+        return Sun(declination, equationOfTime)
+    }
+
+    private fun angleTime(
+        angle: Double,
+        lat: Double,
+        dec: Double
+    ): Double {
+        val numerator =
+            -sin(radians(angle)) -
+                sin(radians(lat)) * sin(radians(dec))
+        val denominator =
+            cos(radians(lat)) * cos(radians(dec))
+        val cosineHourAngle = (numerator / denominator).coerceIn(-1.0, 1.0)
+        return Math.toDegrees(acos(cosineHourAngle)) / 15.0
+    }
+
+    private fun utc(c: Calendar, hours: Double): Calendar {
+        val result = Calendar.getInstance()
+        result.timeInMillis = c.timeInMillis
+        result.set(Calendar.HOUR_OF_DAY, 0)
+        result.set(Calendar.MINUTE, 0)
+        result.set(Calendar.SECOND, 0)
+        result.set(Calendar.MILLISECOND, 0)
+        result.timeInMillis += round(hours * 60.0).toLong() * 60000L
+        return result
+    }
+
+    private fun radians(value: Double): Double = value * PI / 180.0
+
+    private fun fix(value: Double): Double {
+        val result = value % 360.0
+        return if (result < 0.0) result + 360.0 else result
+    }
+
+    private fun fixHours(value: Double): Double {
+        val result = value % 24.0
+        return if (result < 0.0) result + 24.0 else result
+    }
 }
