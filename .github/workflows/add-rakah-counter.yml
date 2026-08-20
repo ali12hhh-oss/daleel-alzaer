@@ -1,0 +1,148 @@
+name: Add Rakah Counter
+
+on:
+  push:
+    paths:
+      - '.github/workflows/add-rakah-counter.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  edit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Add separate Rakah Counter section
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('app/src/main/java/com/daleelalzaer/app/MainActivity.kt')
+          text = path.read_text(encoding='utf-8')
+
+          route_anchor = '                composable("prayer") { PrayerScreen(nav) }\n'
+          route_insert = route_anchor + '                composable("rakah") { RakahCounterScreen(nav) }\n'
+          if 'composable("rakah")' not in text:
+              if route_anchor not in text:
+                  raise SystemExit('Route anchor not found')
+              text = text.replace(route_anchor, route_insert, 1)
+
+          home_anchor = '            item { HomeCard(nav, "مواقيت الصلاة", "حسب كتيب مواقيت الصلاة للسيد السيستاني", Icons.Default.AccessTime, "prayer") }\n'
+          home_insert = home_anchor + '            item { HomeCard(nav, "عداد الركعات", "عداد مستقل للركعات أثناء الصلاة", Icons.Default.FormatListNumbered, "rakah") }\n'
+          if 'HomeCard(nav, "عداد الركعات"' not in text:
+              if home_anchor not in text:
+                  raise SystemExit('Home anchor not found')
+              text = text.replace(home_anchor, home_insert, 1)
+
+          screen_anchor = '@Composable private fun QadaScreen(nav: NavHostController) {'
+          screen = r'''@Composable
+private fun RakahCounterScreen(nav: NavHostController) {
+    var count by rememberSaveable { mutableIntStateOf(0) }
+
+    Scaffold(bottomBar = { BottomBar(nav) }) { pad ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(pad)
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            PageHeader(
+                title = "عداد الركعات",
+                icon = Icons.Default.FormatListNumbered,
+                nav = nav
+            )
+
+            Spacer(Modifier.height(28.dp))
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(28.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "الركعة الحالية",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Spacer(Modifier.height(10.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .size(190.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(158.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = count.toString(),
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                fontSize = 58.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(22.dp))
+
+                    WaterButton(
+                        text = "إضافة ركعة",
+                        onClick = { count++ },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(Modifier.height(10.dp))
+
+                    WaterButton(
+                        text = "تصفير العداد",
+                        onClick = { count = 0 },
+                        modifier = Modifier.fillMaxWidth(),
+                        container = MaterialTheme.colorScheme.secondary,
+                        content = Color.White
+                    )
+                }
+            }
+        }
+    }
+}
+
+'''
+          if 'private fun RakahCounterScreen' not in text:
+              if screen_anchor not in text:
+                  raise SystemExit('Screen anchor not found')
+              text = text.replace(screen_anchor, screen + screen_anchor, 1)
+
+          path.write_text(text, encoding='utf-8')
+
+      - name: Commit changes and remove temporary workflow
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/daleelalzaer/app/MainActivity.kt
+          git commit -m "Add standalone rakah counter section" || true
+          git rm .github/workflows/add-rakah-counter.yml
+          git commit -m "Remove temporary rakah migration workflow"
+          git push
