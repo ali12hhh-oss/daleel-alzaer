@@ -23,9 +23,7 @@ android {
     }
 
     kotlinOptions { jvmTarget = "17" }
-
     buildFeatures { compose = true }
-
     packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
 }
 
@@ -53,4 +51,5 @@ dependencies {
     implementation("androidx.room:room-paging:2.6.1")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
     implementation("com.google.android.gms:play-services-location:21.3.0")
+    implementation("org.osmdroid:osmdroid-android:6.1.18")
 }
