@@ -1,0 +1,1 @@
+Temporary trigger for the standalone rakah counter migration. This file is removed after the migration workflow commits the actual MainActivity.kt change.
