@@ -16,6 +16,10 @@
         android:theme="@style/Theme.DaleelAlzaer"
         android:icon="@drawable/ic_launcher_foreground">
         <activity
+            android:name=".PdfViewerActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+        <activity
             android:name=".MainActivity"
             android:exported="true"
             android:screenOrientation="portrait">
