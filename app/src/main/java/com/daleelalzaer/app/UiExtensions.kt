@@ -2,15 +2,14 @@ package com.daleelalzaer.app
 
 import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable as composeRememberSaveable
-import androidx.compose.runtime.MutableIntState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import kotlinx.coroutines.CoroutineScope
@@ -35,13 +34,10 @@ fun InteractionSource.collectIsPressedAsState(): State<Boolean> {
     return state
 }
 
-/** Typed saveable-state wrappers. Explicit return types prevent Kotlin 2.x inference ambiguity. */
+/** Single generic saveable-state wrapper. The previous MutableIntState overload caused
+ * Boolean and Double states to resolve to the wrong overload under Kotlin 2.x. */
 @Composable
 fun <T> rememberSaveable(init: () -> MutableState<T>): MutableState<T> =
-    composeRememberSaveable(init = init)
-
-@Composable
-fun rememberSaveable(init: () -> MutableIntState): MutableIntState =
     composeRememberSaveable(init = init)
 
 /** Used only by the Toggle helper, which is not itself a RowScope receiver. */
