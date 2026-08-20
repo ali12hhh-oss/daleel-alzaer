@@ -1,6 +1,8 @@
 package com.daleelalzaer.app
 
 import android.content.Context
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
@@ -11,8 +13,6 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.floor
 import kotlin.math.ln
-import kotlin.math.max
-import kotlin.math.min
 import kotlin.math.tan
 
 @Serializable
@@ -83,9 +83,10 @@ object OfflineMapService {
         var failed = 0
         onProgress(0, tiles.size, 0)
 
-        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            for (tile in tiles) {
-                val (z, x, y) = tile
+        // Intentionally sequential: no async/await is used here, so the file stays
+        // compatible with the project's coroutine dependencies and remains easy to audit.
+        withContext(Dispatchers.IO) {
+            for ((z, x, y) in tiles) {
                 val file = File(root(context), "$z/$x/$y.png")
 
                 if (file.exists() && file.length() > 0L) {
