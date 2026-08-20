@@ -1,0 +1,76 @@
+name: Repair MainActivity build
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Patch MainActivity.kt
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          p = Path('app/src/main/java/com/daleelalzaer/app/MainActivity.kt')
+          s = p.read_text(encoding='utf-8')
+
+          # Explicit imports avoid dependency/version resolution ambiguity.
+          imports = [
+              'import androidx.compose.foundation.interaction.collectIsPressedAsState',
+              'import androidx.compose.ui.graphics.graphicsLayer',
+              'import androidx.compose.ui.platform.LocalLayoutDirection',
+              'import androidx.compose.ui.unit.LayoutDirection',
+              'import androidx.compose.runtime.CompositionLocalProvider',
+              'import androidx.compose.material3.NavigationBarItem',
+          ]
+          lines = s.splitlines()
+          for imp in imports:
+              if imp not in s:
+                  # Insert after the last androidx import block's first line.
+                  idx = 0
+                  for i, line in enumerate(lines):
+                      if line.startswith('import '):
+                          idx = i + 1
+                  lines.insert(idx, imp)
+          s = '\n'.join(lines) + ('\n' if s.endswith('\n') else '')
+
+          # These functions call Material3 composables and therefore must be composable.
+          for name in ('BottomBar', 'NavItem'):
+              pattern = rf'(?m)^(?!@Composable\n)private fun {name}\('
+              s = re.sub(pattern, '@Composable\nprivate fun ' + name + '(', s)
+
+          p.write_text(s, encoding='utf-8')
+          print('Patched MainActivity.kt')
+
+      - name: Compile check
+        run: ./gradlew :app:assembleDebug --no-daemon
+
+      - name: Commit repair
+        if: success()
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/src/main/java/com/daleelalzaer/app/MainActivity.kt
+          if git diff --cached --quiet; then
+            echo 'No source changes were necessary.'
+          else
+            git commit -m 'fix: repair MainActivity composable build errors [skip ci]'
+            git push
+          fi
+
+      - name: Remove repair workflow
+        if: success()
+        run: |
+          git rm .github/workflows/fix-mainactivity-build.yml
+          git commit -m 'chore: remove one-time build repair workflow [skip ci]'
+          git push
