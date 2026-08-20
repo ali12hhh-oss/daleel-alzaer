@@ -2,7 +2,7 @@ name: بناء Native - دليل الزائر
 on:
   workflow_dispatch:
   push:
-    branches: [ "native-migration" ]
+    branches: [ "main", "native-migration", "phase3-full-content-ui" ]
 jobs:
   build:
     runs-on: ubuntu-latest
