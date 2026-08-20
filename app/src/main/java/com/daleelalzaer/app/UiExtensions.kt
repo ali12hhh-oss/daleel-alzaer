@@ -8,7 +8,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable as composeRememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import kotlinx.coroutines.CoroutineScope
@@ -33,16 +32,6 @@ fun InteractionSource.collectIsPressedAsState(): State<Boolean> {
     }
     return state
 }
-
-/**
- * Exact generic wrapper around Compose rememberSaveable.
- * It deliberately preserves the concrete state type returned by the initializer
- * (MutableState, MutableIntState, MutableLongState, etc.) so Kotlin does not
- * widen the state and create ++ / delegate overload ambiguities.
- */
-@Composable
-fun <T> rememberSaveable(init: () -> T): T =
-    composeRememberSaveable(init = init)
 
 /** Compatibility helper used by the existing Toggle composable. */
 fun Modifier.weight(weight: Float): Modifier =
