@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 import kotlin.math.atan2
@@ -15,12 +16,20 @@ import kotlin.math.sqrt
 object LocationSupport {
     const val MECCA_LAT = 21.422487
     const val MECCA_LNG = 39.826206
-    const val HUSSAIN_SHRINE_LAT = 32.61639
-    const val HUSSAIN_SHRINE_LNG = 44.03250
 
     fun hasPermission(context: Context): Boolean =
         ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
             ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+
+    suspend fun currentLocation(context: Context): android.location.Location? {
+        if (!hasPermission(context)) return null
+        return suspendCancellableCoroutine { continuation ->
+            LocationServices.getFusedLocationProviderClient(context)
+                .getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
+                .addOnSuccessListener { continuation.resume(it) }
+                .addOnFailureListener { continuation.resume(null) }
+        }
+    }
 
     suspend fun lastKnownLocation(context: Context): android.location.Location? {
         if (!hasPermission(context)) return null
