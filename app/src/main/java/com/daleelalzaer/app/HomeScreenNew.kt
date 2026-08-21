@@ -22,13 +22,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Brightness6
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.NightsStay
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -42,11 +41,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -57,9 +56,8 @@ private val HomePanel2 = Color(0xFF083F42)
 private val HomeGold = Color(0xFFD5A23A)
 private val HomeGoldBright = Color(0xFFFFD36A)
 private val HomeText = Color(0xFFFFF7E5)
-private val HomeMuted = Color(0xFFE4D7B9)
 
-private data class HomeAction(val title: String, val assetKey: String, val target: Screen)
+private data class HomeAction(val title: String, val index: Int, val target: Screen)
 
 private fun arabicDigits(value: String): String = value.map { ch ->
     when (ch) {
@@ -79,71 +77,61 @@ private fun arabicTime(hour24: Int, minute: Int): String {
     return "${arabicDigits("%d:%02d".format(Locale.US, hour12, minute))} $suffix"
 }
 
-private fun loadHomeBitmap(context: Context): Bitmap? = try {
-    val raw = context.resources.openRawResource(R.raw.home_assets).bufferedReader().use { it.readText() }
-    val encoded = JSONObject(raw).optString("full")
-    if (encoded.isBlank()) null else {
-        val bytes = Base64.decode(encoded, Base64.DEFAULT)
-        BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-    }
+private fun loadB64Bitmap(context: Context, resourceId: Int): Bitmap? = try {
+    val encoded = context.resources.openRawResource(resourceId).bufferedReader().use { it.readText() }
+        .replace("\\s".toRegex(), "")
+    val bytes = Base64.decode(encoded, Base64.DEFAULT)
+    BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
 } catch (_: Throwable) {
     null
 }
 
-private fun cropAsset(source: Bitmap, key: String): Bitmap? {
-    val rect = when (key) {
-        "route" -> floatArrayOf(.019f,.468f,.324f,.553f)
-        "fiqh" -> floatArrayOf(.333f,.468f,.638f,.553f)
-        "quran" -> floatArrayOf(.646f,.468f,.980f,.553f)
-        "qibla" -> floatArrayOf(.019f,.561f,.324f,.653f)
-        "qada" -> floatArrayOf(.333f,.561f,.638f,.653f)
-        "prayer" -> floatArrayOf(.646f,.561f,.980f,.653f)
-        "lunar" -> floatArrayOf(.019f,.658f,.324f,.751f)
-        "rakats" -> floatArrayOf(.333f,.658f,.638f,.751f)
-        "shrines" -> floatArrayOf(.646f,.658f,.980f,.751f)
-        "tasbih" -> floatArrayOf(.019f,.755f,.324f,.848f)
-        "library" -> floatArrayOf(.333f,.755f,.638f,.848f)
-        "duas" -> floatArrayOf(.646f,.755f,.980f,.848f)
-        "battle" -> floatArrayOf(.019f,.852f,.324f,.944f)
-        "sayings" -> floatArrayOf(.333f,.852f,.638f,.944f)
-        "birth_death" -> floatArrayOf(.646f,.852f,.980f,.944f)
-        "mawadda" -> floatArrayOf(.154f,.944f,.500f,1f)
-        "sermons" -> floatArrayOf(.505f,.944f,.850f,1f)
-        else -> return null
-    }
-    val left = (source.width * rect[0]).toInt().coerceIn(0, source.width - 1)
-    val top = (source.height * rect[1]).toInt().coerceIn(0, source.height - 1)
-    val right = (source.width * rect[2]).toInt().coerceIn(left + 1, source.width)
-    val bottom = (source.height * rect[3]).toInt().coerceIn(top + 1, source.height)
+private fun cropGridAsset(source: Bitmap, index: Int): Bitmap? {
+    val columns = 3
+    val rows = 6
+    val col = index % columns
+    val row = index / columns
+    if (row >= rows) return null
+
+    val cellW = source.width.toFloat() / columns
+    val cellH = source.height.toFloat() / rows
+    val insetX = cellW * 0.018f
+    val insetY = cellH * 0.018f
+    val left = (col * cellW + insetX).toInt().coerceIn(0, source.width - 2)
+    val top = (row * cellH + insetY).toInt().coerceIn(0, source.height - 2)
+    val right = ((col + 1) * cellW - insetX).toInt().coerceIn(left + 1, source.width)
+    val bottom = ((row + 1) * cellH - insetY).toInt().coerceIn(top + 1, source.height)
     return Bitmap.createBitmap(source, left, top, right - left, bottom - top)
 }
 
 @Composable
 fun HomeScreenNew(open: (Screen) -> Unit) {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val source = remember { loadHomeBitmap(context) }
+    val context = LocalContext.current
+    val hero = remember { loadB64Bitmap(context, R.raw.home_hero_b64) }
+    val grid = remember { loadB64Bitmap(context, R.raw.home_grid_b64) }
     val date = remember {
         arabicDigits(SimpleDateFormat("EEEE، d MMMM yyyy", Locale("ar")).format(Date()))
     }
+
     val actions = remember {
         listOf(
-            HomeAction("مسار الزائر", "route", Screen.ROUTE),
-            HomeAction("مسائل شرعية", "fiqh", Screen.TOOLS),
-            HomeAction("القرآن الكريم", "quran", Screen.QURAN),
-            HomeAction("مواقيت الصلاة", "prayer", Screen.PRAYER),
-            HomeAction("قضاء الصلاة", "qada", Screen.QADA),
-            HomeAction("اتجاه القبلة", "qibla", Screen.QIBLA),
-            HomeAction("اتجاه مراقد المعصومين", "shrines", Screen.SHRINES),
-            HomeAction("عداد الركعات", "rakats", Screen.TOOLS),
-            HomeAction("مواقيت الأهلة", "lunar", Screen.TOOLS),
-            HomeAction("الأدعية والزيارات", "duas", Screen.DUA),
-            HomeAction("المكتبة", "library", Screen.TOOLS),
-            HomeAction("المسبحة الإلكترونية", "tasbih", Screen.TASBIH),
-            HomeAction("ولادات ووفيات أهل البيت", "birth_death", Screen.TOOLS),
-            HomeAction("أقوال أهل البيت", "sayings", Screen.TOOLS),
-            HomeAction("أحداث معركة الطف", "battle", Screen.TOOLS),
-            HomeAction("خطب أهل البيت", "sermons", Screen.TOOLS),
-            HomeAction("مودة أهل البيت", "mawadda", Screen.TOOLS)
+            HomeAction("مسار الزائر", 0, Screen.ROUTE),
+            HomeAction("مسائل شرعية", 1, Screen.TOOLS),
+            HomeAction("القرآن الكريم", 2, Screen.QURAN),
+            HomeAction("مواقيت الصلاة", 3, Screen.PRAYER),
+            HomeAction("قضاء الصلاة", 4, Screen.QADA),
+            HomeAction("اتجاه القبلة", 5, Screen.QIBLA),
+            HomeAction("اتجاه مراقد المعصومين", 6, Screen.SHRINES),
+            HomeAction("عداد الركعات", 7, Screen.TOOLS),
+            HomeAction("مواقيت الأهلة", 8, Screen.TOOLS),
+            HomeAction("الأدعية والزيارات", 9, Screen.DUA),
+            HomeAction("المكتبة", 10, Screen.TOOLS),
+            HomeAction("المسبحة الإلكترونية", 11, Screen.TASBIH),
+            HomeAction("ولادات ووفيات أهل البيت", 12, Screen.TOOLS),
+            HomeAction("أقوال أهل البيت", 13, Screen.TOOLS),
+            HomeAction("أحداث معركة الطف", 14, Screen.TOOLS),
+            HomeAction("خطب أهل البيت", 15, Screen.TOOLS),
+            HomeAction("مودة أهل البيت", 16, Screen.TOOLS)
         )
     }
 
@@ -151,23 +139,29 @@ fun HomeScreenNew(open: (Screen) -> Unit) {
         modifier = Modifier.fillMaxSize().background(HomeBg).padding(horizontal = 8.dp),
         verticalArrangement = Arrangement.spacedBy(9.dp)
     ) {
-        item { HomeHeader(source) }
+        item { HomeHeader(hero) }
         item { HomePrayerPanel() }
         item { HomeDateAndCountdown(date) }
+
         actions.chunked(3).forEach { rowActions ->
             item {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    rowActions.forEach { action -> HomeTile(source, action, open, Modifier.weight(1f)) }
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    rowActions.forEach { action ->
+                        HomeTile(grid, action, open, Modifier.weight(1f))
+                    }
                     repeat(3 - rowActions.size) { Spacer(Modifier.weight(1f)) }
                 }
             }
         }
-        item { Spacer(Modifier.height(14.dp)) }
+        item { Spacer(Modifier.height(12.dp)) }
     }
 }
 
 @Composable
-private fun HomeHeader(source: Bitmap?) {
+private fun HomeHeader(hero: Bitmap?) {
     Card(
         modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
         shape = RoundedCornerShape(24.dp),
@@ -181,7 +175,9 @@ private fun HomeHeader(source: Bitmap?) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(
-                    modifier = Modifier.clip(RoundedCornerShape(24.dp)).background(HomePanel2).padding(horizontal = 12.dp, vertical = 7.dp),
+                    modifier = Modifier.clip(RoundedCornerShape(24.dp))
+                        .background(HomePanel2)
+                        .padding(horizontal = 12.dp, vertical = 7.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(Icons.Default.LocationOn, null, tint = HomeGoldBright, modifier = Modifier.size(21.dp))
@@ -197,11 +193,15 @@ private fun HomeHeader(source: Bitmap?) {
                     IconButton(onClick = {}) { Icon(Icons.Default.Notifications, "التنبيهات", tint = HomeGoldBright) }
                 }
             }
-            Box(Modifier.fillMaxWidth().height(176.dp), contentAlignment = Alignment.Center) {
-                if (source != null) {
+
+            Box(
+                Modifier.fillMaxWidth().height(170.dp),
+                contentAlignment = Alignment.BottomStart
+            ) {
+                if (hero != null) {
                     Image(
-                        bitmap = source.asImageBitmap(),
-                        contentDescription = "مرقد الإمام الحسين عليه السلام",
+                        bitmap = hero.asImageBitmap(),
+                        contentDescription = "صورة حقيقية لمرقد الإمام الحسين عليه السلام",
                         modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(20.dp)),
                         contentScale = ContentScale.Crop
                     )
@@ -209,8 +209,9 @@ private fun HomeHeader(source: Bitmap?) {
                     Box(Modifier.fillMaxSize().background(HomePanel2))
                 }
                 Box(
-                    Modifier.align(Alignment.BottomStart).padding(start = 22.dp, bottom = 12.dp)
-                        .background(Color.Black.copy(alpha = .34f), RoundedCornerShape(12.dp)).padding(horizontal = 14.dp, vertical = 7.dp)
+                    Modifier.padding(start = 18.dp, bottom = 12.dp)
+                        .background(Color.Black.copy(alpha = .38f), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 14.dp, vertical = 6.dp)
                 ) {
                     Text("دليل الزائر", color = HomeGoldBright, fontSize = 29.sp, fontWeight = FontWeight.Black)
                 }
@@ -235,14 +236,38 @@ private fun HomePrayerPanel() {
         border = BorderStroke(1.dp, HomeGold.copy(alpha = .85f))
     ) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 7.dp, vertical = 10.dp)) {
-            Text("أوقات الصلاة", Modifier.fillMaxWidth(), color = HomeGoldBright, fontSize = 21.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+            Text(
+                "أوقات الصلاة",
+                Modifier.fillMaxWidth(),
+                color = HomeGoldBright,
+                fontSize = 21.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
             Spacer(Modifier.height(9.dp))
             Row(Modifier.fillMaxWidth()) {
                 prayers.forEach { (name, time) ->
-                    Column(Modifier.weight(1f).padding(horizontal = 2.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(name, color = HomeText, fontSize = if (name == "منتصف الليل") 9.sp else 11.sp, fontWeight = FontWeight.Bold, maxLines = 1, textAlign = TextAlign.Center)
+                    Column(
+                        Modifier.weight(1f).padding(horizontal = 2.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            name,
+                            color = HomeText,
+                            fontSize = if (name == "منتصف الليل") 9.sp else 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            textAlign = TextAlign.Center
+                        )
                         Spacer(Modifier.height(5.dp))
-                        Text(time, color = HomeGoldBright, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, textAlign = TextAlign.Center)
+                        Text(
+                            time,
+                            color = HomeGoldBright,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            textAlign = TextAlign.Center
+                        )
                     }
                 }
             }
@@ -252,8 +277,16 @@ private fun HomePrayerPanel() {
 
 @Composable
 private fun HomeDateAndCountdown(date: String) {
-    Card(Modifier.fillMaxWidth(), RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = HomePanel), border = BorderStroke(1.dp, HomeGold.copy(alpha = .75f))) {
-        Row(Modifier.fillMaxWidth().padding(vertical = 10.dp, horizontal = 12.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+    Card(
+        Modifier.fillMaxWidth(), RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = HomePanel),
+        border = BorderStroke(1.dp, HomeGold.copy(alpha = .75f))
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(vertical = 10.dp, horizontal = 12.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
                 Text("الوقت المتبقي لصلاة الظهر", color = HomeText, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 Text(arabicDigits("2:22:15"), color = HomeGoldBright, fontSize = 25.sp, fontWeight = FontWeight.Black)
@@ -268,19 +301,28 @@ private fun HomeDateAndCountdown(date: String) {
 }
 
 @Composable
-private fun HomeTile(source: Bitmap?, action: HomeAction, open: (Screen) -> Unit, modifier: Modifier) {
-    val tile = remember(source, action.assetKey) { source?.let { cropAsset(it, action.assetKey) } }
+private fun HomeTile(grid: Bitmap?, action: HomeAction, open: (Screen) -> Unit, modifier: Modifier) {
+    val tile = remember(grid, action.index) { grid?.let { cropGridAsset(it, action.index) } }
     Card(
-        modifier = modifier.height(105.dp).clickable { open(action.target) },
+        modifier = modifier.height(104.dp).clickable { open(action.target) },
         shape = RoundedCornerShape(17.dp),
         colors = CardDefaults.cardColors(containerColor = HomePanel),
         border = BorderStroke(1.dp, HomeGold.copy(alpha = .88f))
     ) {
         if (tile != null) {
-            Image(bitmap = tile.asImageBitmap(), contentDescription = action.title, modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(17.dp)), contentScale = ContentScale.FillBounds)
+            Image(
+                bitmap = tile.asImageBitmap(),
+                contentDescription = action.title,
+                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(17.dp)),
+                contentScale = ContentScale.FillBounds
+            )
         } else {
-            Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                Text(action.title, color = HomeText, fontSize = 13.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+            Column(
+                Modifier.fillMaxSize().padding(5.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(action.title, color = HomeText, fontSize = 12.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
             }
         }
     }
