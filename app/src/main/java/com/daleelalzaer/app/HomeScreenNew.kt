@@ -102,7 +102,7 @@ private fun cropGridAsset(source: Bitmap, index: Int): Bitmap? {
     val left = (col * cellW + insetX).toInt().coerceIn(0, source.width - 2)
     val top = (row * cellH + topInset).toInt().coerceIn(0, source.height - 2)
     val right = ((col + 1) * cellW - insetX).toInt().coerceIn(left + 1, source.width)
-    val bottom = (row * cellH + imageBottom).toInt().coerceIn(top + 1, source.height)
+    val bottom = ((row + 1) * cellH - (cellH - imageBottom)).toInt().coerceIn(top + 1, source.height)
     return Bitmap.createBitmap(source, left, top, right - left, bottom - top)
 }
 
