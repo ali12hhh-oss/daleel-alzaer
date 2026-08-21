@@ -37,7 +37,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.clip
+import androidx.compose.ui.background
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -102,7 +103,7 @@ private fun cropGridAsset(source: Bitmap, index: Int): Bitmap? {
     val left = (col * cellW + insetX).toInt().coerceIn(0, source.width - 2)
     val top = (row * cellH + topInset).toInt().coerceIn(0, source.height - 2)
     val right = ((col + 1) * cellW - insetX).toInt().coerceIn(left + 1, source.width)
-    val bottom = (row * cellH + imageBottom).toInt().coerceIn(top + 1, source.height)
+    val bottom = ((row + imageBottom)).toInt().coerceIn(top + 1, source.height)
     return Bitmap.createBitmap(source, left, top, right - left, bottom - top)
 }
 
@@ -115,10 +116,6 @@ fun HomeScreenNew(open: (Screen) -> Unit) {
         arabicDigits(SimpleDateFormat("EEEE، d MMMM yyyy", Locale("ar")).format(Date()))
     }
 
-    // ترتيب الواجهة الرئيسي كما تم اعتماده سابقاً، مع حذف:
-    // 1) أحداث معركة الطف
-    // 2) مودة أهل البيت
-    // ولا يوجد زر باسم «أقوال أهل البيت»؛ الزر المعتمد هو «خطب أهل البيت» فقط.
     val actions = remember {
         listOf(
             HomeAction("مسار الزائر", 0, Screen.ROUTE),
