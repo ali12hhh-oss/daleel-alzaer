@@ -37,7 +37,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -95,10 +95,6 @@ private fun cropGridAsset(source: Bitmap, index: Int): Bitmap? {
 
     val cellW = source.width.toFloat() / columns
     val cellH = source.height.toFloat() / rows
-
-    // The source artwork contains the illustration in the upper part of each cell
-    // and the old embedded label at the bottom. Crop only the illustration so the
-    // new UI can render the label as real Compose text below it.
     val insetX = cellW * 0.025f
     val topInset = cellH * 0.035f
     val imageBottom = cellH * 0.72f
@@ -119,6 +115,10 @@ fun HomeScreenNew(open: (Screen) -> Unit) {
         arabicDigits(SimpleDateFormat("EEEE، d MMMM yyyy", Locale("ar")).format(Date()))
     }
 
+    // ترتيب الواجهة الرئيسي كما تم اعتماده سابقاً، مع حذف:
+    // 1) أحداث معركة الطف
+    // 2) مودة أهل البيت
+    // ولا يوجد زر باسم «أقوال أهل البيت»؛ الزر المعتمد هو «خطب أهل البيت» فقط.
     val actions = remember {
         listOf(
             HomeAction("مسار الزائر", 0, Screen.ROUTE),
@@ -134,10 +134,7 @@ fun HomeScreenNew(open: (Screen) -> Unit) {
             HomeAction("المكتبة", 10, Screen.TOOLS),
             HomeAction("المسبحة الإلكترونية", 11, Screen.TASBIH),
             HomeAction("ولادات ووفيات أهل البيت", 12, Screen.TOOLS),
-            HomeAction("أقوال أهل البيت", 13, Screen.TOOLS),
-            HomeAction("أحداث معركة الطف", 14, Screen.TOOLS),
-            HomeAction("خطب أهل البيت", 15, Screen.TOOLS),
-            HomeAction("مودة أهل البيت", 16, Screen.TOOLS)
+            HomeAction("خطب أهل البيت", 13, Screen.TOOLS)
         )
     }
 
