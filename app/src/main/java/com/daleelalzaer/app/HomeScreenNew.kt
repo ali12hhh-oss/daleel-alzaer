@@ -1,7 +1,6 @@
 package com.daleelalzaer.app
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -19,14 +18,18 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.Balance
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.CompassCalibration
 import androidx.compose.material.icons.filled.Event
+import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.FormatQuote
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.LibraryBooks
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.NightsStay
@@ -34,6 +37,7 @@ import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.SelfImprovement
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Spa
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -44,22 +48,29 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private val HomeBg = Color(0xFF001D27)
-private val HomePanel = Color(0xFF052E38)
-private val HomeGold = Color(0xFFD6A84F)
-private val HomeGoldBright = Color(0xFFF0C766)
-private val HomeText = Color(0xFFF8F0DC)
+private val HomeBg = Color(0xFF001B23)
+private val HomePanel = Color(0xFF052F38)
+private val HomePanelLight = Color(0xFF083E47)
+private val HomeGold = Color(0xFFD7A947)
+private val HomeGoldBright = Color(0xFFFFD36A)
+private val HomeText = Color(0xFFFFF8E8)
+private val HomeMuted = Color(0xFFE5D8BA)
+
+private const val SHRINE_IMAGE_URL =
+    "https://raw.githubusercontent.com/ali12hhh-oss/daleel_zuwar_alhussein/main/assets/images/hussain_shrine.png"
 
 private data class HomeAction(
     val title: String,
@@ -88,7 +99,7 @@ private fun arabicTime(hour24: Int, minute: Int): String {
 @Composable
 fun HomeScreenNew(open: (Screen) -> Unit) {
     val date = remember {
-        arabicDigits(SimpleDateFormat("EEEE، d MMMM yyyy", Locale("ar")).format(Date()))
+        SimpleDateFormat("EEEE، d MMMM yyyy", Locale("ar")).format(Date())
     }
 
     val actions = remember {
@@ -99,13 +110,13 @@ fun HomeScreenNew(open: (Screen) -> Unit) {
             HomeAction("مواقيت الصلاة", Icons.Default.AccessTime, Screen.PRAYER),
             HomeAction("قضاء الصلاة", Icons.Default.Home, Screen.QADA),
             HomeAction("اتجاه القبلة", Icons.Default.CompassCalibration, Screen.QIBLA),
-            HomeAction("اتجاه مراقد المعصومين", Icons.Default.LocationOn, Screen.SHRINES),
-            HomeAction("عداد الركعات", Icons.Default.AccessTime, Screen.TOOLS),
+            HomeAction("اتجاه مراقد المعصومين", Icons.Default.Explore, Screen.SHRINES),
+            HomeAction("عداد الركعات", Icons.Default.Timer, Screen.TOOLS),
             HomeAction("مواقيت الأهلة", Icons.Default.NightsStay, Screen.TOOLS),
             HomeAction("الأدعية والزيارات", Icons.Default.Spa, Screen.DUA),
-            HomeAction("المكتبة", Icons.Default.MenuBook, Screen.TOOLS),
+            HomeAction("المكتبة", Icons.Default.LibraryBooks, Screen.TOOLS),
             HomeAction("المسبحة الإلكترونية", Icons.Default.SelfImprovement, Screen.TASBIH),
-            HomeAction("ولادات ووفيات أهل البيت", Icons.Default.Event, Screen.TOOLS),
+            HomeAction("ولادات ووفيات أهل البيت", Icons.Default.CalendarMonth, Screen.TOOLS),
             HomeAction("أقوال أهل البيت", Icons.Default.FormatQuote, Screen.TOOLS),
             HomeAction("أحداث معركة الطف", Icons.Default.Flag, Screen.TOOLS),
             HomeAction("خطب أهل البيت", Icons.Default.Campaign, Screen.TOOLS),
@@ -114,17 +125,18 @@ fun HomeScreenNew(open: (Screen) -> Unit) {
     }
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize().background(HomeBg).padding(horizontal = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+        modifier = Modifier.fillMaxSize().background(HomeBg).padding(horizontal = 7.dp),
+        verticalArrangement = Arrangement.spacedBy(11.dp)
     ) {
         item { HomeHero() }
         item { HomePrayerPanel() }
         item { HomeDateAndCountdown(date) }
+
         actions.chunked(3).forEach { rowActions ->
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(9.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     rowActions.forEach { action ->
                         HomeTile(action, open, Modifier.weight(1f))
@@ -133,57 +145,67 @@ fun HomeScreenNew(open: (Screen) -> Unit) {
                 }
             }
         }
-        item { Spacer(Modifier.height(10.dp)) }
+        item { Spacer(Modifier.height(18.dp)) }
     }
 }
 
 @Composable
 private fun HomeHero() {
     Card(
-        modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
-        shape = RoundedCornerShape(26.dp),
+        modifier = Modifier.fillMaxWidth().padding(top = 5.dp),
+        shape = RoundedCornerShape(25.dp),
         colors = CardDefaults.cardColors(containerColor = HomePanel),
-        border = BorderStroke(1.dp, HomeGold)
+        border = BorderStroke(1.dp, HomeGold.copy(alpha = .9f))
     ) {
         Column(Modifier.fillMaxWidth()) {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp),
+                horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.LocationOn, null, tint = HomeGoldBright, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(5.dp))
-                    Text("كربلاء المقدسة", color = HomeText, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                IconButton(onClick = { }) {
+                    Icon(Icons.Default.WbSunny, "الوضع النهاري", tint = HomeGoldBright, modifier = Modifier.size(25.dp))
                 }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { }) { Icon(Icons.Default.WbSunny, "الوضع النهاري", tint = HomeGoldBright) }
-                    IconButton(onClick = { }) { Icon(Icons.Default.NightsStay, "الوضع الليلي", tint = HomeGoldBright) }
-                    IconButton(onClick = { }) { Icon(Icons.Default.Settings, "الإعدادات", tint = HomeGoldBright) }
+                IconButton(onClick = { }) {
+                    Icon(Icons.Default.NightsStay, "الوضع الليلي", tint = HomeGoldBright, modifier = Modifier.size(25.dp))
+                }
+                IconButton(onClick = { }) {
+                    Icon(Icons.Default.Settings, "الإعدادات", tint = HomeGoldBright, modifier = Modifier.size(25.dp))
                 }
             }
 
             Box(
-                modifier = Modifier.fillMaxWidth().height(226.dp),
-                contentAlignment = Alignment.BottomCenter
+                modifier = Modifier.fillMaxWidth().height(270.dp)
             ) {
-                Image(
-                    painter = painterResource(id = R.drawable.shrine_hero),
-                    contentDescription = "صورة المرقد",
+                AsyncImage(
+                    model = SHRINE_IMAGE_URL,
+                    contentDescription = "مرقد الإمام الحسين عليه السلام",
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )
                 Box(
-                    modifier = Modifier.fillMaxWidth().height(118.dp)
-                        .background(Color.Black.copy(alpha = 0.38f))
+                    modifier = Modifier.fillMaxSize().background(
+                        Brush.verticalGradient(
+                            listOf(
+                                Color.Transparent,
+                                Color.Transparent,
+                                Color(0xE6001820)
+                            )
+                        )
+                    )
                 )
-                Text(
-                    text = "دليل الزائر",
-                    color = HomeGoldBright,
-                    fontSize = 40.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 18.dp)
-                )
+                Column(
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 18.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        "دليل الزائر",
+                        color = HomeGoldBright,
+                        fontSize = 38.sp,
+                        fontWeight = FontWeight.Black,
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
         }
     }
@@ -202,28 +224,31 @@ private fun HomePrayerPanel() {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(22.dp),
+        shape = RoundedCornerShape(21.dp),
         colors = CardDefaults.cardColors(containerColor = HomePanel),
         border = BorderStroke(1.dp, HomeGold)
     ) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = 7.dp, vertical = 8.dp)) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 11.dp)) {
             Text(
                 "أوقات الصلاة",
-                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 11.dp),
                 color = HomeGoldBright,
-                fontSize = 21.sp,
+                fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
             )
             Row(Modifier.fillMaxWidth()) {
-                prayers.forEach { (name, time) ->
+                prayers.forEachIndexed { index, (name, time) ->
                     Column(
-                        modifier = Modifier.weight(1f).padding(vertical = 4.dp),
+                        modifier = Modifier.weight(1f).padding(horizontal = 2.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(name, color = HomeText, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-                        Spacer(Modifier.height(6.dp))
-                        Text(time, color = HomeGoldBright, fontSize = 13.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                        Text(name, color = HomeText, fontSize = if (name == "منتصف الليل") 9.sp else 11.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, maxLines = 1)
+                        Spacer(Modifier.height(7.dp))
+                        Text(time, color = HomeGoldBright, fontSize = 13.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, maxLines = 1)
+                    }
+                    if (index < prayers.lastIndex) {
+                        Box(Modifier.width(1.dp).height(39.dp).background(HomeGold.copy(alpha = .35f)))
                     }
                 }
             }
@@ -235,21 +260,21 @@ private fun HomePrayerPanel() {
 private fun HomeDateAndCountdown(date: String) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(19.dp),
         colors = CardDefaults.cardColors(containerColor = HomePanel),
-        border = BorderStroke(1.dp, HomeGold.copy(alpha = .9f))
+        border = BorderStroke(1.dp, HomeGold.copy(alpha = .85f))
     ) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp, horizontal = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("الوقت المتبقي لصلاة الظهر", color = HomeText, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            Text("الوقت المتبقي لصلاة الظهر", color = HomeText, fontSize = 14.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(2.dp))
-            Text(arabicDigits("2:22:15"), color = HomeGoldBright, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(8.dp))
+            Text(arabicDigits("2:22:15"), color = HomeGoldBright, fontSize = 29.sp, fontWeight = FontWeight.Black)
+            Spacer(Modifier.height(7.dp))
             Box(Modifier.fillMaxWidth().height(1.dp).background(HomeGold.copy(alpha = .35f)))
-            Spacer(Modifier.height(8.dp))
-            Text(date, color = HomeText, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
+            Spacer(Modifier.height(7.dp))
+            Text(date, color = HomeMuted, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
         }
     }
 }
@@ -257,26 +282,39 @@ private fun HomeDateAndCountdown(date: String) {
 @Composable
 private fun HomeTile(action: HomeAction, open: (Screen) -> Unit, modifier: Modifier) {
     Card(
-        modifier = modifier.height(132.dp).clickable { open(action.target) },
-        shape = RoundedCornerShape(20.dp),
+        modifier = modifier.height(154.dp).clickable { open(action.target) },
+        shape = RoundedCornerShape(19.dp),
         colors = CardDefaults.cardColors(containerColor = HomePanel),
-        border = BorderStroke(1.dp, HomeGold.copy(alpha = .92f))
+        border = BorderStroke(1.dp, HomeGold.copy(alpha = .92f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
     ) {
         Column(
             modifier = Modifier.fillMaxSize().padding(horizontal = 5.dp, vertical = 9.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Icon(action.icon, action.title, tint = HomeGoldBright, modifier = Modifier.size(46.dp))
-            Spacer(Modifier.height(7.dp))
+            Box(
+                modifier = Modifier.size(68.dp).clip(RoundedCornerShape(18.dp)).background(
+                    Brush.verticalGradient(listOf(HomePanelLight, Color(0xFF031F27)))
+                ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    action.icon,
+                    contentDescription = action.title,
+                    tint = HomeGoldBright,
+                    modifier = Modifier.size(48.dp)
+                )
+            }
+            Spacer(Modifier.height(8.dp))
             Text(
                 action.title,
                 color = HomeText,
-                fontSize = 12.sp,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
                 maxLines = 3,
                 textAlign = TextAlign.Center,
-                lineHeight = 15.sp
+                lineHeight = 17.sp
             )
         }
     }
