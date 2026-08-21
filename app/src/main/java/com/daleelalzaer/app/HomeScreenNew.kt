@@ -95,12 +95,18 @@ private fun cropGridAsset(source: Bitmap, index: Int): Bitmap? {
 
     val cellW = source.width.toFloat() / columns
     val cellH = source.height.toFloat() / rows
-    val insetX = cellW * 0.018f
-    val insetY = cellH * 0.018f
+
+    // The source artwork contains the illustration in the upper part of each cell
+    // and the old embedded label at the bottom. Crop only the illustration so the
+    // new UI can render the label as real Compose text below it.
+    val insetX = cellW * 0.025f
+    val topInset = cellH * 0.035f
+    val imageBottom = cellH * 0.72f
+
     val left = (col * cellW + insetX).toInt().coerceIn(0, source.width - 2)
-    val top = (row * cellH + insetY).toInt().coerceIn(0, source.height - 2)
+    val top = (row * cellH + topInset).toInt().coerceIn(0, source.height - 2)
     val right = ((col + 1) * cellW - insetX).toInt().coerceIn(left + 1, source.width)
-    val bottom = ((row + 1) * cellH - insetY).toInt().coerceIn(top + 1, source.height)
+    val bottom = (row * cellH + imageBottom).toInt().coerceIn(top + 1, source.height)
     return Bitmap.createBitmap(source, left, top, right - left, bottom - top)
 }
 
@@ -304,26 +310,42 @@ private fun HomeDateAndCountdown(date: String) {
 private fun HomeTile(grid: Bitmap?, action: HomeAction, open: (Screen) -> Unit, modifier: Modifier) {
     val tile = remember(grid, action.index) { grid?.let { cropGridAsset(it, action.index) } }
     Card(
-        modifier = modifier.height(104.dp).clickable { open(action.target) },
+        modifier = modifier.height(132.dp).clickable { open(action.target) },
         shape = RoundedCornerShape(17.dp),
         colors = CardDefaults.cardColors(containerColor = HomePanel),
         border = BorderStroke(1.dp, HomeGold.copy(alpha = .88f))
     ) {
-        if (tile != null) {
-            Image(
-                bitmap = tile.asImageBitmap(),
-                contentDescription = action.title,
-                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(17.dp)),
-                contentScale = ContentScale.FillBounds
-            )
-        } else {
-            Column(
-                Modifier.fillMaxSize().padding(5.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+        Column(
+            modifier = Modifier.fillMaxSize().padding(horizontal = 5.dp, vertical = 6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Box(
+                modifier = Modifier.fillMaxWidth().height(86.dp),
+                contentAlignment = Alignment.Center
             ) {
-                Text(action.title, color = HomeText, fontSize = 12.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                if (tile != null) {
+                    Image(
+                        bitmap = tile.asImageBitmap(),
+                        contentDescription = action.title,
+                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(11.dp)),
+                        contentScale = ContentScale.Fit
+                    )
+                }
             }
+            Text(
+                text = action.title,
+                color = HomeText,
+                fontSize = when {
+                    action.title.length > 22 -> 10.sp
+                    action.title.length > 15 -> 11.sp
+                    else -> 12.sp
+                },
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 1.dp)
+            )
         }
     }
 }
